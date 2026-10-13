@@ -1,109 +1,173 @@
-import os
-from dotenv import load_dotenv
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import SystemMessage, HumanMessage
+import re
+
+from langchain_core.messages import (
+    SystemMessage,
+    HumanMessage,
+    ToolMessage,
+)
 
 from langgraph.graph import StateGraph, START
 from langgraph.graph.message import MessagesState
-from langgraph.prebuilt import ToolNode, tools_condition
-from tools.ticket_tools import create_support_ticket
+from langgraph.prebuilt import tools_condition
+
+from llm_config import get_llm
+
 from tools.customer_tools import (
     get_customer_status,
-    get_customer_package
+    get_customer_package,
 )
 from tools.billing_tools import get_customer_bill
-# 1. Load API key from .env
-load_dotenv()
 
 
-# 2. Connect to Gemini
-llm = ChatGoogleGenerativeAI(
-    model=os.environ["GEMINI_MODEL"],
-    google_api_key=os.environ["GEMINI_API_KEY"]
-)
-
-# 3. Give Gemini access to our tool
+# Read-only fictional account tools
 tools = [
     get_customer_status,
     get_customer_package,
     get_customer_bill,
-    create_support_ticket
 ]
+
+tool_map = {tool.name: tool for tool in tools}
+
+llm = get_llm()
 llm_with_tools = llm.bind_tools(tools)
 
 
-# 4. Create our AI node
-def ai_agent(state: MessagesState):
+def supplied_customer_ids(messages):
+    """
+    Collect IDs explicitly written by the customer.
 
-    # Ask Gemini to process the conversation
+    Only HumanMessage objects are trusted for this
+    fictional demo's ID-presence check.
+    """
+    ids = set()
+
+    for message in messages:
+        if isinstance(message, HumanMessage):
+            matches = re.findall(
+                r"\bISP\d{3,}\b",
+                str(message.content),
+                flags=re.IGNORECASE,
+            )
+            ids.update(value.upper() for value in matches)
+
+    return ids
+
+
+def ai_agent(state: MessagesState):
     response = llm_with_tools.invoke(state["messages"])
 
-    # Debugging: check whether the agent is running
     print("Agent node executed")
 
-    # Debugging: check whether Gemini requested a tool
     if response.tool_calls:
-        print("Tool requested:", response.tool_calls)
+        print(
+            "Tool requested:",
+            [call["name"] for call in response.tool_calls]
+        )
     else:
         print("No tool requested")
 
     return {"messages": [response]}
 
-# 5. Build the LangGraph workflow
+
+def guarded_tools(state: MessagesState):
+    """
+    Validate each tool call before executing it.
+
+    A model-generated customer ID cannot authorize
+    its own lookup.
+    """
+    messages = state["messages"]
+    approved_ids = supplied_customer_ids(messages)
+
+    latest_ai_message = messages[-1]
+    responses = []
+
+    for call in latest_ai_message.tool_calls:
+        tool_name = call["name"]
+        tool_args = call.get("args", {})
+        tool_call_id = call["id"]
+
+        requested_id = str(
+            tool_args.get("customer_id", "")
+        ).upper()
+
+        if requested_id not in approved_ids:
+            result = {
+                "error": "customer_id_not_supplied",
+                "message": (
+                    "This customer ID was not supplied "
+                    "by the customer. Ask for their ID."
+                ),
+            }
+
+        elif tool_name not in tool_map:
+            result = {
+                "error": "unknown_tool",
+                "message": "Requested tool is not available.",
+            }
+
+        else:
+            try:
+                result = tool_map[tool_name].invoke(tool_args)
+            except Exception:
+                result = {
+                    "error": "tool_execution_failed",
+                    "message": "Lookup could not be completed.",
+                }
+
+        responses.append(
+            ToolMessage(
+                content=str(result),
+                tool_call_id=tool_call_id,
+                name=tool_name,
+            )
+        )
+
+    return {"messages": responses}
+
+
+# LangGraph workflow
 workflow = StateGraph(MessagesState)
 
 workflow.add_node("agent", ai_agent)
-workflow.add_node("tools", ToolNode(tools))
+workflow.add_node("tools", guarded_tools)
 
 workflow.add_edge(START, "agent")
 
 workflow.add_conditional_edges(
     "agent",
-    tools_condition
+    tools_condition,
 )
 
 workflow.add_edge("tools", "agent")
 
-# 6. Compile the graph
 app = workflow.compile()
-def show_workflow_steps():
-    print("\nOur LangGraph workflow:")
-    print("START -> agent")
-    print("agent -> tools (if needed)")
-    print("tools -> agent")
-    print("agent -> END (when finished)")
 
-# 7. Test our workflow
+
 if __name__ == "__main__":
-    print("\nStarting LangGraph workflow...\n")
+    print("\nTesting guarded LangGraph workflow...\n")
 
-    result = app.invoke({
-        "messages": [
-            SystemMessage(content="""
-            You are a polite Pakistani ISP support assistant.
+    result = app.invoke(
+        {
+            "messages": [
+                SystemMessage(
+                    content=(
+                        "You are a Pakistani ISP support assistant. "
+                        "Reply in Roman Urdu. Never invent customer IDs. "
+                        "If no customer ID is supplied, ask for it. "
+                        "Use only fictional test data."
+                    )
+                ),
+                HumanMessage(
+                    content="ISP001 ka internet bill kitna hai?"
+                ),
+            ]
+        },
+        config={"recursion_limit": 10},
+    )
 
-            Reply in simple Roman Urdu using English letters.
-            Always address customers as 'aap'.
-
-            When asked about internet connection status,
-            use the get_customer_status tool.
-
-            Never invent connection details.
-            The tool uses fictional test data, not live Falcon data.
-            """),
-
- HumanMessage(
-    content="ISP001 ka internet bill kitna hai?"
-)
-        ]
-    })
-
-    # Display only the final text
     final_message = result["messages"][-1]
 
     print("\nAI Agent:")
-
-    for block in final_message.content_blocks:
-        if block["type"] == "text":
-            print(block["text"])
+    print(final_message.content)
