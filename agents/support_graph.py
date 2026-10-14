@@ -67,6 +67,15 @@ def ai_agent(state: MessagesState):
             "If the FAQ is insufficient, explain the limitation "
             "or ask a clarifying question.\n\n"
             f"FAQ INFORMATION:\n{faq_context}"
+            "Never recommend factory resetting an ISP router "
+            "unless the ISP support team explicitly authorizes it. "
+            "Do not instruct customers to update router firmware "
+            "without verified ISP-specific guidance. "
+            "Prefer safe troubleshooting steps such as testing "
+            "near the router, checking connected devices, "
+            "and comparing Wi-Fi performance across devices. "
+            "If the customer already restarted the router, "
+            "do not repeatedly suggest restarting it. "
         )
     )
 
