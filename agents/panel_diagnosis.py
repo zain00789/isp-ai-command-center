@@ -8,34 +8,41 @@ def analyze_panel_account(
     account_number: str
 ) -> dict:
     """
-    Combine a fictional panel lookup with diagnosis.
+    Analyze fictional ISP account information.
 
-    For local testing only.
-    Do not expose this function directly to unverified callers.
+    Account access requires backend authorization.
+    Unverified requests must not receive account details.
     """
 
-    # Step 1: Retrieve fictional account information
+    # Step 1: Request account information
     account = get_mock_account(
         panel=panel,
         account_number=account_number
     )
 
-    # Step 2: Handle errors
-    if "error" in account:
+    # Step 2: Block unauthorized requests
+    if account.get("error") == "authorization_required":
         return {
-            "panel": panel,
-            "account_number": account_number,
-            "diagnosis": account["error"],
+            "diagnosis": "authorization_required",
             "response": (
-                "Account information nahi mil saki. "
-                "Barah-e-karam details check karein."
+                "Aapke account ki details check karne ke liye "
+                "secure verification zaroori hai."
             )
         }
 
-    # Step 3: Analyze account data
+    # Step 3: Handle other lookup errors
+    if "error" in account:
+        return {
+            "diagnosis": "account_lookup_unavailable",
+            "response": (
+                "Account information filhal available nahi hai. "
+                "Barah-e-karam support team se rabta karein."
+            )
+        }
+
+    # Step 4: Diagnose authorized account data
     diagnosis = diagnose_connection(account)
 
-    # Step 4: Return structured result
     return {
         "panel": account["panel"],
         "account_number": account["account_number"],

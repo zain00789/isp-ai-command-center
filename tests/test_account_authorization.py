@@ -3,6 +3,9 @@ from fastapi.testclient import TestClient
 
 from backend.main import app
 from backend.authorization import is_customer_authorized
+from tools.message_tools import send_test_message, sent_messages
+from tools.panel_adapter import get_mock_account
+from agents.panel_diagnosis import analyze_panel_account
 
 from tools.customer_tools import (
     get_customer_status,
@@ -104,3 +107,54 @@ def test_empty_session_id_is_not_authorized():
     )
 
     assert result is False
+
+from tools.ticket_tools import create_support_ticket, tickets
+
+
+def test_ticket_creation_requires_authorization():
+    initial_count = len(tickets)
+
+    result = create_support_ticket.invoke({
+        "customer_id": "ISP001",
+        "issue": "Internet not working"
+    })
+
+    assert result["error"] == "authorization_required"
+    assert len(tickets) == initial_count
+
+    
+
+
+def test_notification_requires_authorization():
+    initial_count = len(sent_messages)
+
+    result = send_test_message.invoke({
+        "customer_id": "ISP001",
+        "ticket_id": "TKT-0001"
+    })
+
+    assert result["error"] == "authorization_required"
+    assert len(sent_messages) == initial_count
+
+   
+
+
+def test_panel_adapter_requires_authorization():
+    for panel in ["falcon", "jazz", "connect"]:
+        result = get_mock_account(panel, "ISP001")
+
+        assert result["error"] == "authorization_required"
+        assert "connection_status" not in result
+        assert "package_status" not in result
+        assert "expiry_date" not in result
+
+        
+
+def test_panel_diagnosis_requires_authorization():
+    for panel in ["falcon", "jazz", "connect"]:
+        result = analyze_panel_account(panel, "ISP001")
+
+        assert result["diagnosis"] == "authorization_required"
+        assert "connection_status" not in result
+        assert "package_status" not in result
+        assert "account_number" not in result

@@ -1,5 +1,5 @@
 
-from datetime import date
+from backend.authorization import is_customer_authorized
 
 
 # Fictional account records for local testing
@@ -30,14 +30,28 @@ MOCK_ACCOUNTS = {
 
 def get_mock_account(panel: str, account_number: str) -> dict:
     """
-    Return normalized fictional account information.
+    Return fictional account details only after authorization.
 
+    Temporary deny-by-default implementation.
     No live ISP panel access.
-    No authentication is performed here.
     """
 
     normalized_panel = panel.strip().lower()
     normalized_account = account_number.strip().upper()
+
+    # Authorization must happen before account lookup.
+    # The empty session ID does not grant access.
+    if not is_customer_authorized(
+        customer_id=normalized_account,
+        session_id=""
+    ):
+        return {
+            "error": "authorization_required",
+            "message": (
+                "Secure customer verification is required "
+                "before accessing panel account information."
+            )
+        }
 
     if normalized_panel not in MOCK_ACCOUNTS:
         return {
