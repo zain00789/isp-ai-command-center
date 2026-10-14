@@ -1,4 +1,9 @@
+
 from langchain_core.tools import tool
+
+from backend.authorization import is_customer_authorized
+
+
 # Fictional customer data for development only
 customers = {
     "ISP001": {
@@ -14,9 +19,28 @@ customers = {
 }
 
 
+def authorization_denied() -> dict:
+    return {
+        "error": "authorization_required",
+        "message": (
+            "Customer verification is required "
+            "before accessing account information."
+        )
+    }
+
+
 @tool
 def get_customer_status(customer_id: str) -> dict:
-    """Look up the connection status of a fictional ISP customer."""
+    """Check customer connection status only after authorization."""
+
+    # No trusted authenticated session is available to this tool.
+    # Never use a customer ID as proof of identity.
+    # Keep authorization denied until backend verification exists.
+    if not is_customer_authorized(
+        customer_id=customer_id,
+        session_id=""
+    ):
+        return authorization_denied()
 
     customer = customers.get(customer_id)
 
@@ -28,9 +52,16 @@ def get_customer_status(customer_id: str) -> dict:
         "connection_status": customer["status"]
     }
 
+
 @tool
 def get_customer_package(customer_id: str) -> dict:
-    """Get the internet package of a fictional ISP customer."""
+    """Check customer package only after authorization."""
+
+    if not is_customer_authorized(
+        customer_id=customer_id,
+        session_id=""
+    ):
+        return authorization_denied()
 
     customer = customers.get(customer_id)
 
