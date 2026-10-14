@@ -161,6 +161,33 @@ def process_customer_message(message: str, session_id: str) -> dict:
             "action": "error"
         }
 
+    # Explicit complaint registration takes priority
+    # over general internet troubleshooting.
+    complaint_keywords = [
+        "complaint register",
+        "complaint file",
+        "complaint lodge",
+        "register complaint",
+        "complaint kar",
+        "complaint likh",
+        "shikayat darj",
+        "shikayat register",
+    ]
+
+    if intent == "new_complaint" or any(
+        keyword in message.lower()
+        for keyword in complaint_keywords
+    ):
+        return {
+            "intent": "new_complaint",
+            "response": (
+                "Aapki complaint register karne ke liye "
+                "secure customer verification aur "
+                "aapki confirmation zaroori hai. "
+                "Filhal complaint register nahi hui."
+            ),
+            "action": "start_complaint"
+        }
     # Start panel selection for internet connection problems
     connection_keywords = [
         "internet nahi chal",
