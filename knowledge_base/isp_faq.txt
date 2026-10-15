@@ -1,0 +1,21 @@
+
+ISP CUSTOMER SUPPORT KNOWLEDGE BASE
+Development example — verify all instructions with the ISP.
+
+Q: What should I do if my internet is not working?
+A: Check that the router has power. Check the cable connections. Restart the router once and wait for it to reconnect. If the issue continues, contact the ISP support team.
+
+Q: What does a red LOS light mean?
+A: On many fiber ONTs, a red LOS light indicates loss of optical signal. Check that the fiber cable is connected and not visibly damaged. Do not bend or disconnect the fiber cable unnecessarily. Contact technical support if the red light remains.
+
+Q: What should I do if Wi-Fi is slow?
+A: Test near the router, check how many devices are connected, and compare the speed on another device. Restart the router if appropriate.
+
+Q: What should I do if my Wi-Fi password is forgotten?
+A: Check the router label or the password saved on an authorized device. Contact support for help if necessary. Do not factory-reset the router without ISP instructions.
+
+Q: What happens if my internet package expires?
+A: Service may be interrupted depending on the ISP's policy. Package expiry and renewal details must be verified using an authorized account lookup.
+
+Q: How can I register a complaint?
+A: The customer must complete secure identity verification before an account-specific complaint can be registered.

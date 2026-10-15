@@ -31,15 +31,19 @@ def check_customer(state: ComplaintState):
 
 
 # 3. Decide whether to continue
+
 def check_permission(state: ComplaintState):
+    """
+    Temporary deny-by-default authorization.
 
-    if not state["matched"]:
-        return "rejected"
+    A matching customer ID and phone number does not
+    prove that the caller owns the account.
+    """
 
-    if not state["confirmed"]:
-        return "rejected"
+    # Do not create tickets without trusted
+    # backend customer authentication.
+    return "rejected"
 
-    return "approved"
 
 
 # 4. Create fictional support ticket
@@ -69,11 +73,14 @@ def send_confirmation(state: ComplaintState):
     }
 # 5. Handle rejected request
 def reject_request(state: ComplaintState):
-
     return {
-        "result": "Ticket not created. Verification or confirmation missing."
+        "result": (
+            "Ticket not created. "
+            "Secure customer verification is required."
+        ),
+        "ticket_id": "",
+        "message_status": ""
     }
-
 
 # 6. Build LangGraph
 workflow = StateGraph(ComplaintState)

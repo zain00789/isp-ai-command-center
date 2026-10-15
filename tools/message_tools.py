@@ -1,4 +1,8 @@
+
 from langchain_core.tools import tool
+
+from backend.authorization import is_customer_authorized
+
 
 # Temporary storage for simulated messages
 sent_messages = []
@@ -9,11 +13,30 @@ def send_test_message(
     customer_id: str,
     ticket_id: str
 ) -> dict:
-    """Queue a fictional ISP complaint confirmation message."""
+    """
+    Queue a fictional complaint confirmation message.
+
+    Secure customer authorization is required.
+    No real SMS or WhatsApp messages are sent.
+    """
+
+    # Temporary deny-by-default protection.
+    # A customer ID or ticket ID does not prove identity.
+    if not is_customer_authorized(
+        customer_id=customer_id,
+        session_id=""
+    ):
+        return {
+            "error": "authorization_required",
+            "message": (
+                "Secure customer verification is required "
+                "before sending a complaint notification."
+            )
+        }
 
     message = (
-        f"Assalam-o-Alaikum! "
-        f"Aapki internet complaint register ho gayi hai. "
+        "Assalam-o-Alaikum! "
+        "Aapki internet complaint register ho gayi hai. "
         f"Aapka ticket number {ticket_id} hai."
     )
 

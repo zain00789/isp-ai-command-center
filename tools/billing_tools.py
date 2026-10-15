@@ -1,4 +1,8 @@
+
 from langchain_core.tools import tool
+
+from backend.authorization import is_customer_authorized
+
 
 # Fictional customer billing records
 bills = {
@@ -19,7 +23,21 @@ bills = {
 
 @tool
 def get_customer_bill(customer_id: str) -> dict:
-    """Get fictional ISP customer billing details."""
+    """Get customer billing details only after authorization."""
+
+    # No trusted authenticated session is available.
+    # Deny access until backend verification exists.
+    if not is_customer_authorized(
+        customer_id=customer_id,
+        session_id=""
+    ):
+        return {
+            "error": "authorization_required",
+            "message": (
+                "Customer verification is required "
+                "before accessing account information."
+            )
+        }
 
     bill = bills.get(customer_id)
 
