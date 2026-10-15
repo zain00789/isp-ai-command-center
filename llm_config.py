@@ -7,7 +7,7 @@ load_dotenv()
 
 
 def get_llm():
-    provider = os.getenv("LLM_PROVIDER", "groq").lower()
+    provider = os.getenv("LLM_PROVIDER", "groq").strip().lower()
 
     if provider == "groq":
         from langchain_groq import ChatGroq
