@@ -1,47 +1,46 @@
+
+from unittest.mock import patch
+
 from langchain_core.messages import HumanMessage, AIMessage
 
-from agents.support_graph import guarded_tools
+from agents.support_graph import ai_agent
 
 
-def test_lookup(customer_message, requested_id):
-    customer = HumanMessage(content=customer_message)
+def test_account_lookup_tools_are_not_exposed():
+    """The support agent must not expose customer account tools."""
 
-    tool_request = AIMessage(
-        content="",
-        tool_calls=[
-            {
-                "name": "get_customer_status",
-                "args": {"customer_id": requested_id},
-                "id": "test-call-001",
-                "type": "tool_call",
-            }
-        ],
+    from agents import support_graph
+
+    assert not hasattr(support_graph, "guarded_tools")
+    assert not hasattr(support_graph, "get_customer_status")
+
+
+def test_agent_does_not_execute_customer_lookup():
+    """An LLM-generated lookup request must not execute an account tool."""
+
+    fake_response = AIMessage(
+        content="Customer verification zaroori hai."
     )
 
-    result = guarded_tools({
-        "messages": [customer, tool_request]
-    })
+    with (
+        patch(
+            "agents.support_graph.hybrid_search",
+            return_value=[]
+        ),
+       patch(
+        "agents.support_graph.llm"
+        ) as mock_llm,
+    ):
+        mock_llm.invoke.return_value = fake_response
+        result = ai_agent({
+            "messages": [
+                HumanMessage(
+                    content="Mera customer ID ISP001 hai. Status batao."
+                )
+            ]
+        })
 
-    print("Customer message:", customer_message)
-    print("Requested customer ID:", requested_id)
-    print("Tool result:", result["messages"][0].content)
-    print("-" * 50)
-
-
-print("\nTEST 1: Invented customer ID")
-test_lookup(
-    "Mera internet slow hai",
-    "ISP001"
-)
-
-print("\nTEST 2: Customer-supplied ID")
-test_lookup(
-    "Mera customer ID ISP001 hai",
-    "ISP001"
-)
-
-print("\nTEST 3: Different customer ID")
-test_lookup(
-    "Mera customer ID ISP001 hai",
-    "ISP002"
-)
+    assert result["messages"][0].content == (
+        "Customer verification zaroori hai."
+    )
+    mock_llm.invoke.assert_called_once()
