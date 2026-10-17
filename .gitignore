@@ -1,6 +1,17 @@
+# Python virtual environment and secrets
 .venv/
 .env
+
+# Python cache
 __pycache__/
 *.pyc
 .pytest_cache/
-.vscode/python -m pip install --upgrade pippython -c "import langchain, langgraph, langchain_google_genai, dotenv; print('AI libraries installed successfully!')"
+
+# VS Code settings
+.vscode/
+
+# Generated audio test files
+*.mp3
+*.ogg
+*.wav
+*.db
